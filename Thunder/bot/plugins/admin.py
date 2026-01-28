@@ -345,12 +345,25 @@ async def run_shell_command(client: Client, message: Message):
     if len(message.command) < 2:
         return await reply(
             message, text=MSG_SHELL_USAGE, parse_mode=ParseMode.HTML)
-    
-    command = " ".join(message.command[1:])
-    status_msg = await reply(message,
-                text=MSG_SHELL_EXECUTING.format(
-                    command=html.escape(command)),
-                parse_mode=ParseMode.HTML)
+
+    command_args = message.command[1:]
+    silent_flags = {"-q", "--quiet", "-s", "--silent"}
+    silent_mode = False
+    if command_args[0] in silent_flags:
+        silent_mode = True
+        command_args = command_args[1:]
+    if not command_args:
+        return await reply(
+            message, text=MSG_SHELL_USAGE, parse_mode=ParseMode.HTML)
+
+    command = " ".join(command_args)
+    status_msg = None
+    if not silent_mode:
+        status_msg = await reply(
+            message,
+            text=MSG_SHELL_EXECUTING.format(command=html.escape(command)),
+            parse_mode=ParseMode.HTML,
+        )
     
     try:
         process = await asyncio.create_subprocess_shell(
@@ -371,43 +384,60 @@ async def run_shell_command(client: Client, message: Message):
         
         output = output.strip() or MSG_SHELL_NO_OUTPUT
         
-        try:
-            await status_msg.delete()
-        except FloodWait as e:
-            logger.debug(f"FloodWait in shell status message delete, sleeping for {e.value}s")
-            await asyncio.sleep(e.value)
-            await status_msg.delete()
-        
-        if len(output) > 4096:
-            file = BytesIO(output.encode())
-            file.name = "shell_output.txt"
+        if not silent_mode and status_msg is not None:
             try:
-                await message.reply_document(
-                    file,
-                    caption=MSG_SHELL_OUTPUT.format(
-                        command=html.escape(command)))
+                await status_msg.delete()
             except FloodWait as e:
-                logger.debug(f"FloodWait in shell output document, sleeping for {e.value}s")
+                logger.debug(f"FloodWait in shell status message delete, sleeping for {e.value}s")
                 await asyncio.sleep(e.value)
-                await message.reply_document(
-                    file,
-                    caption=MSG_SHELL_OUTPUT.format(
-                        command=html.escape(command)))
-        else:
-            await reply(message, text=output, parse_mode=ParseMode.HTML)
+                await status_msg.delete()
+
+        if not silent_mode:
+            if len(output) > 4096:
+                file = BytesIO(output.encode())
+                file.name = "shell_output.txt"
+                try:
+                    await message.reply_document(
+                        file,
+                        caption=MSG_SHELL_OUTPUT.format(
+                            command=html.escape(command)))
+                except FloodWait as e:
+                    logger.debug(f"FloodWait in shell output document, sleeping for {e.value}s")
+                    await asyncio.sleep(e.value)
+                    await message.reply_document(
+                        file,
+                        caption=MSG_SHELL_OUTPUT.format(
+                            command=html.escape(command)))
+            else:
+                await reply(message, text=output, parse_mode=ParseMode.HTML)
             
     except Exception as e:
+        if silent_mode:
+            logger.error(f"Error in shell command (silent): {e}", exc_info=True)
+            return
         try:
             try:
-                await status_msg.edit_text(
-                    MSG_SHELL_ERROR.format(error=html.escape(str(e))),
-                    parse_mode=ParseMode.HTML)
+                if status_msg is not None:
+                    await status_msg.edit_text(
+                        MSG_SHELL_ERROR.format(error=html.escape(str(e))),
+                        parse_mode=ParseMode.HTML)
+                else:
+                    await reply(
+                        message,
+                        text=MSG_SHELL_ERROR.format(error=html.escape(str(e))),
+                        parse_mode=ParseMode.HTML)
             except FloodWait as e:
                 logger.debug(f"FloodWait in shell error message edit, sleeping for {e.value}s")
                 await asyncio.sleep(e.value)
-                await status_msg.edit_text(
-                    MSG_SHELL_ERROR.format(error=html.escape(str(e))),
-                    parse_mode=ParseMode.HTML)
+                if status_msg is not None:
+                    await status_msg.edit_text(
+                        MSG_SHELL_ERROR.format(error=html.escape(str(e))),
+                        parse_mode=ParseMode.HTML)
+                else:
+                    await reply(
+                        message,
+                        text=MSG_SHELL_ERROR.format(error=html.escape(str(e))),
+                        parse_mode=ParseMode.HTML)
             except MessageNotModified:
                 pass
         except Exception:
