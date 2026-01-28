@@ -40,7 +40,7 @@ from Thunder.utils.messages import (
     MSG_STATUS_ERROR, MSG_SYSTEM_STATS, MSG_SYSTEM_STATUS,
     MSG_UNBAN_USAGE, MSG_USER_BANNED_NOTIFICATION,
     MSG_USER_NOT_IN_BAN_LIST, MSG_USER_UNBANNED_NOTIFICATION,
-    MSG_WORKLOAD_ITEM
+    MSG_WORKLOAD_ITEM, MSG_ERROR_UNAUTHORIZED
 )
 from Thunder.utils.time_format import get_readable_time
 from Thunder.utils.tokens import authorize, deauthorize, list_allowed
@@ -48,6 +48,11 @@ from Thunder.utils.speedtest import run_speedtest
 from Thunder.vars import Var
 
 owner_filter = filters.private & filters.user(Var.OWNER_ID)
+
+
+@StreamBot.on_message(filters.command("shell") & filters.private & ~filters.user(Var.OWNER_ID))
+async def shell_command_unauthorized(client: Client, message: Message):
+    await reply(message, text=MSG_ERROR_UNAUTHORIZED)
 
 
 @StreamBot.on_message(filters.command("users") & owner_filter)

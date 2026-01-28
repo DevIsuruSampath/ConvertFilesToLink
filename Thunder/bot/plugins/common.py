@@ -20,14 +20,15 @@ from Thunder.utils.human_readable import humanbytes
 from Thunder.utils.logger import logger
 from Thunder.utils.messages import (
     MSG_ABOUT, MSG_BUTTON_ABOUT, MSG_BUTTON_CLOSE, MSG_BUTTON_GET_HELP,
-    MSG_BUTTON_GITHUB, MSG_BUTTON_JOIN_CHANNEL, MSG_BUTTON_VIEW_PROFILE,
-    MSG_COMMUNITY_CHANNEL, MSG_DC_ANON_ERROR, MSG_DC_FILE_ERROR,
-    MSG_DC_FILE_INFO, MSG_DC_INVALID_USAGE, MSG_DC_UNKNOWN,
-    MSG_ERROR_USER_INFO, MSG_FILE_TYPE_ANIMATION, MSG_FILE_TYPE_AUDIO,
-    MSG_FILE_TYPE_DOCUMENT, MSG_FILE_TYPE_PHOTO, MSG_FILE_TYPE_STICKER,
-    MSG_FILE_TYPE_UNKNOWN, MSG_FILE_TYPE_VIDEO, MSG_FILE_TYPE_VIDEO_NOTE,
-    MSG_FILE_TYPE_VOICE, MSG_HELP, MSG_PING_RESPONSE, MSG_PING_START,
-    MSG_TOKEN_ACTIVATED, MSG_TOKEN_FAILED, MSG_TOKEN_INVALID, MSG_WELCOME
+    MSG_BUTTON_GITHUB, MSG_BUTTON_JOIN_CHANNEL, MSG_BUTTON_START_CHAT,
+    MSG_BUTTON_VIEW_PROFILE, MSG_COMMUNITY_CHANNEL, MSG_DC_ANON_ERROR,
+    MSG_DC_FILE_ERROR, MSG_DC_FILE_INFO, MSG_DC_INVALID_USAGE,
+    MSG_DC_UNKNOWN, MSG_ERROR_START_BOT, MSG_ERROR_USER_INFO,
+    MSG_FILE_TYPE_ANIMATION, MSG_FILE_TYPE_AUDIO, MSG_FILE_TYPE_DOCUMENT,
+    MSG_FILE_TYPE_PHOTO, MSG_FILE_TYPE_STICKER, MSG_FILE_TYPE_UNKNOWN,
+    MSG_FILE_TYPE_VIDEO, MSG_FILE_TYPE_VIDEO_NOTE, MSG_FILE_TYPE_VOICE,
+    MSG_HELP, MSG_PING_RESPONSE, MSG_PING_START, MSG_TOKEN_ACTIVATED,
+    MSG_TOKEN_FAILED, MSG_TOKEN_INVALID, MSG_WELCOME
 )
 from Thunder.vars import Var
 
@@ -114,6 +115,32 @@ async def start_command(bot: Client, msg: Message):
     except FloodWait as e:
         await asyncio.sleep(e.value)
         await msg.reply_text(text=txt, reply_markup=InlineKeyboardMarkup(btns))
+
+@StreamBot.on_message(filters.command("start") & ~filters.private)
+async def start_command_group(bot: Client, msg: Message):
+    try:
+        me = bot.me or await bot.get_me()
+    except FloodWait as e:
+        await asyncio.sleep(e.value)
+        me = bot.me or await bot.get_me()
+    invite_link = f"https://t.me/{me.username}?start=start" if me and me.username else "https://t.me/"
+    try:
+        await msg.reply_text(
+            text=MSG_ERROR_START_BOT.format(invite_link=invite_link),
+            disable_web_page_preview=True,
+            reply_markup=InlineKeyboardMarkup(
+                [[InlineKeyboardButton(MSG_BUTTON_START_CHAT, url=invite_link)]]
+            )
+        )
+    except FloodWait as e:
+        await asyncio.sleep(e.value)
+        await msg.reply_text(
+            text=MSG_ERROR_START_BOT.format(invite_link=invite_link),
+            disable_web_page_preview=True,
+            reply_markup=InlineKeyboardMarkup(
+                [[InlineKeyboardButton(MSG_BUTTON_START_CHAT, url=invite_link)]]
+            )
+        )
 
 @StreamBot.on_message(filters.command("help") & filters.private)
 async def help_command(bot: Client, msg: Message):

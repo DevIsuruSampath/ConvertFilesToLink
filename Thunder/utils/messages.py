@@ -16,6 +16,12 @@ MSG_ERROR_NO_FILE = "⚠️ The message you're replying to does not contain any 
 MSG_ERROR_INVALID_NUMBER = "⚠️ **Invalid number specified.**"
 MSG_ERROR_NUMBER_RANGE = "⚠️ **Please specify a number between 1 and {max_files}.**"
 MSG_ERROR_DM_FAILED = "⚠️ I couldn't send you a Direct Message. Please start the bot first."
+MSG_GROUP_MEDIA_HINT = (
+    "ℹ️ **Group Usage:**\n"
+    "• Reply to the file with `/link` to generate links.\n"
+    "• Start a private chat first so I can DM your links.\n"
+    "👉 [Click here]({invite_link}) to start a private chat."
+)
 
 # ------ File & Media Errors ------
 MSG_ERROR_PROCESSING_MEDIA = "⚠️ **Oops!** Something went wrong while processing your media. Please try again. If the issue persists, contact support."
