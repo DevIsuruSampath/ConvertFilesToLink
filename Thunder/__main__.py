@@ -5,11 +5,7 @@ import glob
 import importlib.util
 import sys
 from datetime import datetime
-
-from uvloop import install
 from pathlib import Path
-
-install()
 from aiohttp import web
 from pyrogram import idle
 from pyrogram.errors import FloodWait, MessageNotModified
@@ -30,6 +26,11 @@ from Thunder.vars import Var
 
 PLUGIN_PATH = "Thunder/bot/plugins/*.py"
 VERSION = __version__
+
+if sys.platform != "win32" and importlib.util.find_spec("uvloop"):
+    import uvloop
+
+    uvloop.install()
 
 
 def print_banner():
@@ -271,14 +272,11 @@ async def schedule_token_cleanup():
             logger.error(f"Token cleanup error: {e}", exc_info=True)
 
 if __name__ == '__main__':
-    loop = asyncio.get_event_loop()
     try:
-        loop.run_until_complete(start_services())
+        asyncio.run(start_services())
     except KeyboardInterrupt:
         print("╔═══════════════════════════════════════════════════════════╗")
         print("║                   Bot stopped by user (CTRL+C)            ║")
         print("╚═══════════════════════════════════════════════════════════╝")
     except Exception as e:
         logger.error(f"An unexpected error occurred: {e}")
-    finally:
-        loop.close()
