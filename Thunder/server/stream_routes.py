@@ -207,6 +207,13 @@ async def media_delivery(request: web.Request):
     try:
         path = request.match_info["path"]
         message_id, secure_hash = parse_media_request(path, request.query)
+        download_requested = request.query.get("download", "").lower() in {
+            "1",
+            "true",
+            "yes",
+            "y",
+            "on",
+        }
 
         client_id, streamer = select_optimal_client()
 
@@ -248,7 +255,8 @@ async def media_delivery(request: web.Request):
                 "Content-Type": mime_type,
                 "Content-Length": str(content_length),
                 "Content-Disposition": (
-                    f"inline; filename*=UTF-8''{quote(filename)}"),
+                    f"{'attachment' if download_requested else 'inline'}; "
+                    f"filename*=UTF-8''{quote(filename)}"),
                 "Accept-Ranges": "bytes",
                 "Cache-Control": "public, max-age=31536000",
                 "Connection": "keep-alive",

@@ -40,19 +40,22 @@ async def render_page(id: int, secure_hash: str, requested_action: str | None = 
         
         quoted_filename = urllib.parse.quote(file_name.replace('/', '_'))
         src = urllib.parse.urljoin(Var.URL, f'{secure_hash}{id}/{quoted_filename}')
+        download_src = f"{src}?download=1"
         safe_filename = html_module.escape(file_name)
         if requested_action == 'stream':
             template = template_env.get_template('req.html')
             context = {
                 'heading': f"View {safe_filename}",
                 'file_name': safe_filename,
-                'src': src
+                'src': src,
+                'download_src': download_src,
             }
         else:
             template = template_env.get_template('dl.html')
             context = {
                 'file_name': safe_filename,
-                'src': src
+                'src': src,
+                'download_src': download_src,
             }
         return await template.render_async(**context)
     except Exception as e:
