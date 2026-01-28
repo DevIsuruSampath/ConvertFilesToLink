@@ -23,9 +23,9 @@ from Thunder.utils.messages import (
     MSG_DM_SINGLE_PREFIX, MSG_ERROR_DM_FAILED, MSG_ERROR_INVALID_NUMBER,
     MSG_ERROR_NO_FILE, MSG_ERROR_NOT_ADMIN, MSG_ERROR_NUMBER_RANGE,
     MSG_ERROR_PROCESSING_MEDIA, MSG_ERROR_REPLY_FILE, MSG_ERROR_START_BOT,
-    MSG_LINKS, MSG_NEW_FILE_REQUEST, MSG_PROCESSING_BATCH,
-    MSG_PROCESSING_FILE, MSG_PROCESSING_REQUEST, MSG_PROCESSING_RESULT,
-    MSG_PROCESSING_STATUS
+    MSG_GROUP_MEDIA_HINT, MSG_LINKS, MSG_NEW_FILE_REQUEST,
+    MSG_PROCESSING_BATCH, MSG_PROCESSING_FILE, MSG_PROCESSING_REQUEST,
+    MSG_PROCESSING_RESULT, MSG_PROCESSING_STATUS
 )
 from Thunder.utils.rate_limiter import handle_rate_limited_request
 from Thunder.vars import Var
@@ -182,6 +182,43 @@ async def send_link(msg: Message, links: Dict[str, Any]):
             parse_mode=enums.ParseMode.MARKDOWN,
             disable_web_page_preview=True,
             reply_markup=get_link_buttons(links)
+        )
+
+
+@StreamBot.on_message(
+    filters.group &
+    filters.incoming &
+    (filters.document | filters.video | filters.photo | filters.audio |
+     filters.voice | filters.animation | filters.video_note),
+    group=3
+)
+async def group_media_hint_handler(bot: Client, msg: Message):
+    if not await check_banned(bot, msg):
+        return
+    try:
+        me = bot.me or await bot.get_me()
+    except FloodWait as e:
+        await asyncio.sleep(e.value)
+        me = bot.me or await bot.get_me()
+    invite_link = f"https://t.me/{me.username}?start=start" if me and me.username else "https://t.me/"
+    try:
+        await msg.reply_text(
+            MSG_GROUP_MEDIA_HINT.format(invite_link=invite_link),
+            disable_web_page_preview=True,
+            parse_mode=enums.ParseMode.MARKDOWN,
+            reply_markup=InlineKeyboardMarkup(
+                [[InlineKeyboardButton(MSG_BUTTON_START_CHAT, url=invite_link)]]
+            )
+        )
+    except FloodWait as e:
+        await asyncio.sleep(e.value)
+        await msg.reply_text(
+            MSG_GROUP_MEDIA_HINT.format(invite_link=invite_link),
+            disable_web_page_preview=True,
+            parse_mode=enums.ParseMode.MARKDOWN,
+            reply_markup=InlineKeyboardMarkup(
+                [[InlineKeyboardButton(MSG_BUTTON_START_CHAT, url=invite_link)]]
+            )
         )
 
 
