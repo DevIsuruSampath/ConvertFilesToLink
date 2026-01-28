@@ -97,6 +97,8 @@ MSG_ADMIN_AUTH_LIST_HEADER = "🔐 **Authorized Users List**\n\n"
 MSG_SHELL_USAGE = (
     "<b>Usage:</b>\n"
     "/shell <command>\n\n"
+    "<b>Silent Mode:</b>\n"
+    "/shell --silent <command>\n\n"
     "<b>Example:</b>\n"
     "/shell ls -l"
 )
