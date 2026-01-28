@@ -1,5 +1,6 @@
 # Thunder/server/stream_routes.py
 
+import contextlib
 import re
 import secrets
 import time
@@ -278,37 +279,50 @@ async def media_delivery(request: web.Request):
                 )
 
             async def stream_generator():
-                try:
-                    bytes_sent = 0
-                    bytes_to_skip = start % CHUNK_SIZE
+                bytes_sent = 0
+                bytes_to_skip = start % CHUNK_SIZE
 
-                    async for chunk in streamer.stream_file(
-                            message_id, offset=start, limit=content_length):
-                        if bytes_to_skip > 0:
-                            if len(chunk) <= bytes_to_skip:
-                                bytes_to_skip -= len(chunk)
-                                continue
-                            chunk = chunk[bytes_to_skip:]
-                            bytes_to_skip = 0
+                async for chunk in streamer.stream_file(
+                        message_id, offset=start, limit=content_length):
+                    if bytes_to_skip > 0:
+                        if len(chunk) <= bytes_to_skip:
+                            bytes_to_skip -= len(chunk)
+                            continue
+                        chunk = chunk[bytes_to_skip:]
+                        bytes_to_skip = 0
 
-                        remaining = content_length - bytes_sent
-                        if len(chunk) > remaining:
-                            chunk = chunk[:remaining]
+                    remaining = content_length - bytes_sent
+                    if len(chunk) > remaining:
+                        chunk = chunk[:remaining]
 
-                        if chunk:
-                            yield chunk
-                            bytes_sent += len(chunk)
+                    if chunk:
+                        yield chunk
+                        bytes_sent += len(chunk)
 
-                        if bytes_sent >= content_length:
-                            break
-                finally:
-                    work_loads[client_id] -= 1
+                    if bytes_sent >= content_length:
+                        break
 
-            return web.Response(
+            response = web.StreamResponse(
                 status=206 if range_header else 200,
-                body=stream_generator(),
                 headers=headers
             )
+            try:
+                await response.prepare(request)
+            except Exception:
+                work_loads[client_id] -= 1
+                raise
+
+            try:
+                async for chunk in stream_generator():
+                    await response.write(chunk)
+            except ConnectionResetError:
+                logger.debug("Client disconnected during streaming.")
+            finally:
+                work_loads[client_id] -= 1
+                with contextlib.suppress(ConnectionResetError):
+                    await response.write_eof()
+
+            return response
 
         except (FileNotFound, InvalidHash):
             work_loads[client_id] -= 1
